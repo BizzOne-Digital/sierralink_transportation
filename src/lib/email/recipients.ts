@@ -1,0 +1,50 @@
+/** Normalize and dedupe email addresses (case-insensitive). */
+export function uniqueEmails(addresses: Array<string | undefined | null>): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const address of addresses) {
+    const trimmed = address?.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+  }
+
+  return result;
+}
+
+/**
+ * Admin alerts go to the business inbox (env + site settings), plus the SMTP
+ * account as a backup when it differs.
+ */
+export function getAdminNotificationRecipients(
+  ...extra: Array<string | undefined | null>
+): string[] {
+  return uniqueEmails([
+    process.env.ADMIN_EMAIL,
+    process.env.SMTP_USER,
+    ...extra,
+  ]);
+}
+
+/** @deprecated Use getAdminNotificationRecipients */
+export const getBookingNotificationRecipients = getAdminNotificationRecipients;
+
+export function getBusinessReplyEmail(preferred?: string): string {
+  const candidates = uniqueEmails([
+    preferred,
+    process.env.ADMIN_EMAIL,
+    process.env.SMTP_USER,
+  ]);
+  return candidates[0] ?? "";
+}
+
+export function formatReplyTo(name: string, email: string): string {
+  const safeName = name.trim().replace(/"/g, "'");
+  const safeEmail = email.trim();
+  if (!safeEmail) return "";
+  if (!safeName) return safeEmail;
+  return `"${safeName}" <${safeEmail}>`;
+}
